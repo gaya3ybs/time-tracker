@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Employee Time Tracker</title>
+<style>
+  /* === Kept your original styling and layout === */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    width: 100vw;
+    max-width: 480px;
+    margin: 10px auto;
+    font-size: 18px;
+    background: #f0f4f8;
+    color: #333;
+    -webkit-text-size-adjust: 100%;
+  }
+  /* dark theme adjustments (applied by JS when user picks dark) */
+  body.dark {
+    background: #0b0f14;
+    color: #e6eef8;
+  }
+  body.dark input, body.dark select, body.dark button, body.dark table, body.dark .card {
+    color: #e6eef8;
+    background: #162028;
+    border-color: #2b3944;
+  }
+  h1, h2 { text-align: center; color: #007ACC; }
+  .card { background: white; padding: 12px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 12px; }
+  body.dark .card { background: #0f1a22; box-shadow: none; }
+  form { background: white; padding: 15px 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
+  body.dark form { background: #0f1a22; box-shadow: none; }
+  label { display: block; margin-top: 15px; font-weight: 600; color: #004a99; }
+  body.dark label { color: #9fc6ff; }
+  input[type="text"], input[type="date"], select, button { font-size: 18px; padding: 8px 12px; margin-top: 6px; width: auto; border-radius: 5px; border: 1.5px solid #007ACC; transition: border-color 0.3s; min-width: 60px; text-align: center; background: white; color: #222; }
+  body.dark input[type="text"], body.dark input[type="date"], body.dark select { background: #0f1a22; color: #e6eef8; border-color: #2b3944; }
+  input:focus, select:focus { outline: none; border-color: #005f99; box-shadow: 0 0 4px #005f99; }
+  input.time-part { margin-right: 6px; border-radius: 6px; border: 1.5px solid #007ACC; text-align: center; min-width: 60px; }
+  button { margin-top: 20px; padding: 12px 0; cursor: pointer; width: 100%; background: #007ACC; color: white; border: none; font-weight: 700; letter-spacing: 1px; box-shadow: 0 2px 6px rgba(0, 122, 204, 0.6); transition: background 0.3s ease; }
+  button:hover { background: #005f99; }
+  #deleteEntryBtn { background: #d9534f; margin-top: 10px; width: 100%; box-shadow: 0 2px 6px rgba(217, 83, 79, 0.8); }
+  #deleteEntryBtn:hover { background: #b52b27; }
+  .result { margin-top: 15px; background: white; padding: 15px 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); font-weight: 600; }
+  body.dark .result { background: #0f1a22; box-shadow: none; }
+
+  /* Calendar wrapper + header */
+  #calendarTopRow { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top: 6px; margin-bottom:6px; }
+  #calendarTopRow .title { font-weight:700; color:#004a99; font-size:18px; text-align:center; flex:1; }
+  body.dark #calendarTopRow .title { color:#9fc6ff; }
+  #calendarTopRow .navBtn { background:#007ACC; color:white; padding:8px 10px; border-radius:8px; border:none; font-weight:700; cursor:pointer; }
+  body.dark #calendarTopRow .navBtn { background:#2b3944; }
+
+  #calendarWrapper { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; min-height: 260px; }
+  #calendarHeader { text-align: center; font-weight: 700; color: #004a99; margin-top: 6px; margin-bottom: 6px; font-size: 18px; }
+  table.calendar { width: 100%; border-collapse: collapse; margin-top: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); border-radius: 10px; overflow: hidden; table-layout: fixed; min-width: 360px; background: white; }
+  body.dark table.calendar { background: #0f1a22; }
+  table.calendar th, table.calendar td { border: 1px solid #a2c4e8; text-align: center; padding: 12px 8px; font-size: 16px; cursor: pointer; transition: background 0.3s; word-wrap: break-word; position:relative; }
+  body.dark table.calendar th, body.dark table.calendar td { border-color:#20313b; }
+  table.calendar th { background-color: #007ACC; color: white; font-weight: 700; user-select: none; }
+  table.calendar td:hover:not(:empty) { background-color: #bee1ff; color: #003366; }
+  body.dark table.calendar td:hover:not(:empty) { background-color:#082034; color:#cfe9ff; }
+
+  /* Highlight for selected day */
+  table.calendar td.selected { outline: 3px solid #1976D2; background: #E8F4FF; }
+  body.dark table.calendar td.selected { outline: 3px solid #66aaff; background:#082034; color:#cfe9ff; }
+
+  .leave { background-color: #f9d6d5 !important; color: #900000; font-weight: 700; }
+  .breakfast { background-color: #fff7c0 !important; color: #665500; font-weight: 600; }
+  .normal { background-color: #d4edda !important; color: #155724; }
+  .short { background-color: #fceabb !important; color: #a65e00; font-weight: 700; }
+  .extra { background-color: #cce5ff !important; color: #004085; }
+
+  #dayDetails { margin-top: 15px; padding: 15px 20px; border-radius: 10px; background: white; box-shadow: 0 2px 6px rgba(0,0,0,0.1); font-size: 18px; min-height: 130px; color: #004a99; font-weight: 600; word-wrap:break-word; }
+  body.dark #dayDetails { background:#0f1a22; color:#9fc6ff; }
+
+  #reportSection { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-top: 30px; }
+  body.dark #reportSection { background:#0f1a22; box-shadow:none; color:#cfe9ff; }
+
+  #reportTable { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 16px; }
+  #reportTable th, #reportTable td { border: 1px solid #a2c4e8; padding: 8px; text-align: center; }
+  #reportTable th { background-color: #007ACC; color: white; }
+  .small { font-size: 14px; }
+
+  /* theme toggle top-right container */
+  #topControls { display:flex; justify-content:flex-end; gap:8px; margin-bottom:6px; }
+  #themeToggle { display:flex; gap:6px; }
+
+  /* keep layout mobile-friendly */
+  @media (max-width:420px){
+    input[type="text"], input[type="date"], select, button { font-size:16px; padding:6px 8px; }
+    table.calendar td { padding:8px 4px; height:54px; font-size:15px; }
+  }
+</style>
+</head>
+<body>
+  <!-- Top controls: theme toggle on top-right (Option A) -->
+  <div id="topControls">
+    <div id="themeToggle" aria-label="Theme toggle">
+      <button id="lightBtn" style="padding:8px 10px; border-radius:8px; border:none; background:#007ACC; color:white; font-weight:700;">Light</button>
+      <button id="darkBtn" style="padding:8px 10px; border-radius:8px; border:none; background:#444; color:white; font-weight:700;">Dark</button>
+    </div>
+  </div>
+
+  <h1>Employee Time Tracker</h1>
+
+  <!-- Keep the entire original form and UI intact -->
+  <form id="timeForm" autocomplete="off">
+    <label>Date:
+      <input type="date" id="dateInput" required />
+    </label>
+    <label>Login Time (00:00 - 23:59):
+      <input type="text" id="loginHour" maxlength="2" class="time-part" inputmode="numeric" pattern="[0-9]*" placeholder="HH" /> :
+      <input type="text" id="loginMinute" maxlength="2" class="time-part" inputmode="numeric" pattern="[0-9]*" placeholder="MM" />
+    </label>
+
+    <label>Logout Time (00:00 - 23:59):
+      <input type="text" id="logoutHour" maxlength="2" class="time-part" inputmode="numeric" pattern="[0-9]*" placeholder="HH" /> :
+      <input type="text" id="logoutMinute" maxlength="2" class="time-part" inputmode="numeric" pattern="[0-9]*" placeholder="MM" />
+    </label>
+
+    <label>Breakfast Opted?
+      <select id="breakfastOpt">
+        <option value="no">No</option>
+        <option value="yes">Yes (Extra 30 mins deduction)</option>
+      </select>
+    </label>
+
+    <label>Leave:
+      <select id="halfDayLeave">
+        <option value="none">None</option>
+        <option value="firstHalf">First Half (4.5 hrs)</option>
+        <option value="secondHalf">Second Half (4 hrs)</option>
+        <option value="fullDay">Full Day (8.5 hrs)</option>
+      </select>
+    </label>
+
+    <button type="submit">Save Entry</button>
+  </form>
+
+  <div class="result" id="dailyResult"></div>
+  <div class="result" id="weeklySummary"></div>
+
+  <h2 style="margin-top:14px;">Monthly Calendar</h2>
+
+  <!-- Month navigation added (Option A) - sits above the calendar -->
+  <div id="calendarTopRow">
+    <button id="prevMonth" class="navBtn" aria-label="Previous month">◀ Prev</button>
+    <div class="title" id="calendarHeader" aria-hidden="true"></div>
+    <button id="nextMonth" class="navBtn" aria-label="Next month">Next ▶</button>
+  </div>
+
+  <div id="calendarWrapper">
+    <table class="calendar" id="calendar">
+      <thead>
+        <tr>
+          <th>Sun</th><th>Mon</th><th>Tue</th><th>Wed</th>
+          <th>Thu</th><th>Fri</th><th>Sat</th>
+        </tr>
+      </thead>
+      <tbody id="calendarBody"></tbody>
+    </table>
+  </div>
+
+  <button id="deleteEntryBtn" style="background:#d9534f;">Delete Entry</button>
+
+  <div id="dayDetails">Tap a day for details...</div>
+
+  <div id="reportSection">
+    <h2>Generate Date Range Report</h2>
+    <label>Start Date (Monday): <input type="date" id="reportStartDate" /></label>
+    <label>End Date (Sunday): <input type="date" id="reportEndDate" /></label>
+    <button id="generateReportBtn">Generate Report</button>
+    <div id="reportOutput" style="margin-top:10px; overflow-x:auto;"></div>
+  </div>
+
+<script>
+/* =================== Utilities & storage =================== */
+const WEEKLY_TARGET_MINS = 42 * 60 + 30; // 42:30 in minutes
+const storageKey = 'employeeEntries_v_final';
+
+// date helpers
+function pad(n){ return String(n).padStart(2,'0'); }
+function isoFromYMD(y,m,d){ return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
+function formatDate(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+function toMinutesFromString(t){ if(!t) return NaN; const parts = t.split(':'); if(parts.length!==2) return NaN; const h=Number(parts[0]); const m=Number(parts[1]); if(Number.isNaN(h)||Number.isNaN(m)) return NaN; return h*60 + m; }
+function minutesToTime(m){ if(typeof m !== 'number' || isNaN(m)) return '0:00'; const sign = m < 0 ? '-' : ''; m = Math.abs(Math.round(m)); const h = Math.floor(m/60); const mm = Math.abs(m%60); return `${sign}${h}:${pad(mm)}`; }
+
+/* safe localStorage */
+function loadEntries(){ try { return JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch(e){ return {}; } }
+function saveEntries(e){ try { localStorage.setItem(storageKey, JSON.stringify(e)); return true; } catch(err){ return false; } }
+
+/* =================== State =================== */
+let entries = loadEntries(); // { 'YYYY-MM-DD': { loginTime, logoutTime, breakfastOpt, halfDayLeave, workMins } }
+let selectedDate = ''; // single date selection 'YYYY-MM-DD'
+let viewYear = (new Date()).getFullYear();
+let viewMonth = (new Date()).getMonth();
+
+/* DOM refs */
+const calendarBody = document.getElementById('calendarBody');
+const calendarHeader = document.getElementById('calendarHeader');
+const prevMonthBtn = document.getElementById('prevMonth');
+const nextMonthBtn = document.getElementById('nextMonth');
+
+const dateInput = document.getElementById('dateInput');
+const loginHour = document.getElementById('loginHour');
+const loginMinute = document.getElementById('loginMinute');
+const logoutHour = document.getElementById('logoutHour');
+const logoutMinute = document.getElementById('logoutMinute');
+const breakfastEl = document.getElementById('breakfastOpt');
+const leaveEl = document.getElementById('halfDayLeave');
+
+const dailyResult = document.getElementById('dailyResult');
+const weeklySummary = document.getElementById('weeklySummary');
+
+const deleteBtn = document.getElementById('deleteEntryBtn');
+const dayDetails = document.getElementById('dayDetails');
+
+const reportStart = document.getElementById('reportStartDate');
+const reportEnd = document.getElementById('reportEndDate');
+const reportBtn = document.getElementById('generateReportBtn');
+const reportOutput = document.getElementById('reportOutput');
+
+const lightBtn = document.getElementById('lightBtn');
+const darkBtn = document.getElementById('darkBtn');
+
+/* =================== Theme init (top-right) =================== */
+(function(){
+  const saved = localStorage.getItem('theme_mode_v_final');
+  if(saved === 'dark'){ document.body.classList.add('dark'); }
+  else { document.body.classList.remove('dark'); }
+})();
+lightBtn.addEventListener('click', ()=>{ document.body.classList.remove('dark'); localStorage.setItem('theme_mode_v_final','light'); });
+darkBtn.addEventListener('click', ()=>{ document.body.classList.add('dark'); localStorage.setItem('theme_mode_v_final','dark'); });
+
+/* =================== Work calculation =================== */
+function calcWorkMins(login, logout, breakfast, leave){
+  if(leave === 'fullDay') return Math.round(8.5*60);
+  if(!login || !logout) return 0;
+  const loginM = toMinutesFromString(login);
+  const logoutM = toMinutesFromString(logout);
+  if(Number.isNaN(loginM) || Number.isNaN(logoutM)) return 0;
+  if(logoutM < loginM) return 0;
+  let totalM = logoutM - loginM;
+  totalM -= 30; // mandatory break
+  if(breakfast === 'yes') totalM -= 30;
+  if(leave === 'firstHalf') totalM += 270; // +4.5h
+  else if(leave === 'secondHalf') totalM += 240; // +4h
+  return totalM < 0 ? 0 : totalM;
+}
+
+/* =================== Calendar render & interaction =================== */
+function renderCalendar(year, month){
+  calendarBody.innerHTML = ''; // clear
+  // header text
+  const monthName = new Date(year, month, 1).toLocaleString('default', { month: 'long' });
+  calendarHeader.textContent = `${monthName} ${year}`;
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+
+  let tr = document.createElement('tr');
+  // leading blanks
+  for(let i=0;i<firstDay;i++) tr.appendChild(document.createElement('td'));
+
+  for(let d=1; d<=daysInMonth; d++){
+    if((firstDay + d - 1) % 7 === 0 && d !== 1){
+      calendarBody.appendChild(tr);
+      tr = document.createElement('tr');
+    }
+    const td = document.createElement('td');
+    td.textContent = d;
+    const iso = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    td.setAttribute('data-date', iso);
+
+    // class based on saved entry
+    const e = entries[iso];
+    if(e){
+      if(e.halfDayLeave === 'fullDay') td.classList.add('leave');
+      else if(e.halfDayLeave !== 'none') td.classList.add('leave');
+      else if(e.breakfastOpt === 'yes') td.classList.add('breakfast');
+      else {
+        const dailyTarget = Math.round(WEEKLY_TARGET_MINS / 5);
+        const diff = e.workMins - dailyTarget;
+        if(diff < 0) td.classList.add('short');
+        else if(diff > 0) td.classList.add('extra');
+        else td.classList.add('normal');
+      }
+      td.title = `Click to view details for ${iso}`;
+    }
+
+    // highlight selected date (single select)
+    if(selectedDate === iso) td.classList.add('selected');
+
+    // attach safe handlers: click and touch/mouse fallback
+    td.addEventListener('click', () => {
+      // single selection: clear previous selection UI
+      const prev = calendarBody.querySelector('td.selected');
+      if(prev) prev.classList.remove('selected');
+      td.classList.add('selected');
+      selectedDate = iso;
+      onDayClick(iso, td);
+    });
+
+    tr.appendChild(td);
+  }
+
+  // trailing blanks to complete last row
+  while(tr.children.length < 7) tr.appendChild(document.createElement('td'));
+  calendarBody.appendChild(tr);
+}
+
+/* month navigation */
+prevMonthBtn.addEventListener('click', ()=> {
+  viewMonth -= 1;
+  if(viewMonth < 0){ viewMonth = 11; viewYear -= 1; }
+  renderCalendar(viewYear, viewMonth);
+});
+nextMonthBtn.addEventListener('click', ()=> {
+  viewMonth += 1;
+  if(viewMonth > 11){ viewMonth = 0; viewYear += 1; }
+  renderCalendar(viewYear, viewMonth);
+});
+
+/* =================== Day click behavior (loads inputs + details) =================== */
+function onDayClick(dateStr, cell){
+  // set selected visuals handled by caller
+  selectedDate = dateStr;
+
+  const dayData = entries[dateStr] || null;
+
+  // load into input boxes immediately (so user doesn't scroll)
+  if(dayData){
+    document.getElementById('dateInput').value = dateStr;
+    document.getElementById('loginHour').value = dayData.loginTime ? dayData.loginTime.split(':')[0] : '';
+    document.getElementById('loginMinute').value = dayData.loginTime ? dayData.loginTime.split(':')[1] : '';
+    document.getElementById('logoutHour').value = dayData.logoutTime ? dayData.logoutTime.split(':')[0] : '';
+    document.getElementById('logoutMinute').value = dayData.logoutTime ? dayData.logoutTime.split(':')[1] : '';
+    document.getElementById('breakfastOpt').value = dayData.breakfastOpt || 'no';
+    document.getElementById('halfDayLeave').value = dayData.halfDayLeave || 'none';
+  } else {
+    document.getElementById('dateInput').value = dateStr;
+    document.getElementById('loginHour').value = '';
+    document.getElementById('loginMinute').value = '';
+    document.getElementById('logoutHour').value = '';
+    document.getElementById('logoutMinute').value = '';
+    document.getElementById('breakfastOpt').value = 'no';
+    document.getElementById('halfDayLeave').value = 'none';
+  }
+
+  // build details block similar to your previous behavior
+  let inTimeDisplay = '—', exitTimeDisplay = '—';
+  if(dayData && dayData.loginTime){
+    inTimeDisplay = dayData.loginTime;
+    const loginM = toMinutesFromString(dayData.loginTime);
+    if(!Number.isNaN(loginM)){
+      const addM = (dayData.breakfastOpt === 'yes') ? 570 : 540;
+      const exitM = loginM + addM;
+      const exitH = Math.floor(exitM / 60) % 24;
+      const exitMM = exitM % 60;
+      exitTimeDisplay = `${pad(exitH)}:${pad(exitMM)}`;
+    }
+  }
+
+  if(dayData){
+    const dailyTarget = WEEKLY_TARGET_MINS / 5;
+    const diffMins = dayData.workMins - dailyTarget;
+    const clickedDate = new Date(dateStr + 'T00:00');
+    const dayOfWeek = clickedDate.getDay();
+
+    // count remaining Mon-Fri of week from selected day (inclusive)
+    let daysToConsider = 0;
+    if(dayOfWeek >=1 && dayOfWeek <=5) daysToConsider = 5 - dayOfWeek;
+
+    let totalMinsRemaining = 0;
+    for(let i=0;i<=daysToConsider;i++){
+      const dd = new Date(clickedDate);
+      dd.setDate(clickedDate.getDate() + i);
+      if(dd.getDay() === 6 || dd.getDay() === 0) continue;
+      const dtStr = formatDate(dd);
+      if(entries[dtStr]) totalMinsRemaining += entries[dtStr].workMins;
+    }
+
+    const targetForRange = dailyTarget * (daysToConsider + 1);
+    const remainingMins = Math.max(0, targetForRange - totalMinsRemaining);
+
+    let diffText = '';
+    if(diffMins < 0) diffText = `Short Hours Today: ${minutesToTime(-diffMins)}`;
+    else if(diffMins > 0) diffText = `Extra Hours Today: ${minutesToTime(diffMins)}`;
+    else diffText = 'On target hours Today';
+
+    const breakfastText = dayData.breakfastOpt === 'yes' ? 'Yes' : 'No';
+    const leaveText = (dayData.halfDayLeave === 'none') ? 'No' : (dayData.halfDayLeave === 'fullDay' ? 'Full Day' : 'Half Day');
+
+    dayDetails.innerHTML =
+      `<strong>Details for ${dateStr}</strong><br>
+       <strong>In Time Added:</strong> ${inTimeDisplay}<br>
+       <strong>Possible Exit Time (9 hrs / 9.5 hrs with breakfast):</strong> ${exitTimeDisplay}<br><br>
+       Breakfast: ${breakfastText}<br>
+       Leave: ${leaveText}<br>
+       Hours at Office Today: ${minutesToTime(dayData.workMins)}<br>
+       ${diffText}<br><br>
+       <strong>Work Week Summary (${dateStr} - ${formatDate(new Date(new Date(dateStr + 'T00:00').setDate(new Date(dateStr + 'T00:00').getDate() + daysToConsider)))})</strong><br>
+       Total Work Hours: ${minutesToTime(totalMinsRemaining)}<br>
+       Hours Remaining (Mon–Fri): ${remainingMins>0 ? minutesToTime(remainingMins) : '0:00 (Target met or exceeded)'}`;
+  } else {
+    dayDetails.innerHTML =
+      `<strong>Details for ${dateStr}</strong><br>
+       <strong>In Time Added:</strong> —<br>
+       <strong>Possible Exit Time (9 hrs / 9.5 hrs with breakfast):</strong> —<br><br>
+       No data saved for this day.`;
+  }
+
+  // update daily/weekly summary blocks
+  updateSummaryBlocks(dateStr);
+}
+
+/* =================== Weekly totals (Mon-Fri only) =================== */
+function calcWeekTotal(dateStr){
+  const d = new Date(dateStr + 'T00:00');
+  const dow = d.getDay();
+  // find monday
+  const monday = new Date(d);
+  monday.setDate(d.getDate() - ((dow + 6) % 7));
+  let total = 0;
+  for(let i=0;i<5;i++){
+    const dd = new Date(monday);
+    dd.setDate(monday.getDate() + i);
+    const key = formatDate(dd);
+    if(entries[key]) total += entries[key].workMins;
+  }
+  return total;
+}
+
+function updateSummaryBlocks(dateStr){
+  const weekTotal = calcWeekTotal(dateStr);
+  const deficit = Math.max(0, WEEKLY_TARGET_MINS - weekTotal);
+  const over = Math.max(0, weekTotal - WEEKLY_TARGET_MINS);
+  let out = `<b>Mon–Fri total so far:</b> ${minutesToTime(weekTotal)}<br>`;
+  if(deficit > 0) out += `<span style="color:#a65e00;font-weight:700;">Remaining to reach 42:30: ${minutesToTime(deficit)}</span>`;
+  else out += `<span style="color:#155724;font-weight:700;">Extra over 42:30: ${minutesToTime(over)}</span>`;
+  weeklySummary.innerHTML = out;
+}
+
+/* =================== Form submit & save logic =================== */
+document.getElementById('timeForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const date = dateInput.value;
+  if(!date){ alert('Please select a date'); return; }
+
+  const loginHourVal = loginHour.value.trim();
+  const loginMinuteVal = loginMinute.value.trim();
+  const logoutHourVal = logoutHour.value.trim();
+  const logoutMinuteVal = logoutMinute.value.trim();
+  const breakfastVal = breakfastEl.value;
+  const leaveVal = leaveEl.value;
+  const old = entries[date] || {};
+
+  const buildTime = (h,m,oldTime) => {
+    if(h === '' && m === '') return (oldTime || '');
+    if(h === '' || m === '') return '';
+    return pad(Number(h)) + ':' + pad(Number(m));
+  };
+
+  const loginTime = buildTime(loginHourVal, loginMinuteVal, old.loginTime);
+  const logoutTime = buildTime(logoutHourVal, logoutMinuteVal, old.logoutTime);
+
+  // validation ranges
+  const checkRange = (h,m) => {
+    if(h === '' && m === '') return true;
+    const hn = Number(h), mn = Number(m);
+    if(Number.isNaN(hn) || Number.isNaN(mn)) return false;
+    return hn >=0 && hn <=23 && mn >=0 && mn <=59;
+  };
+  if(!checkRange(loginHourVal, loginMinuteVal) || !checkRange(logoutHourVal, logoutMinuteVal)){
+    alert('Please enter valid hours and minutes between 00:00 and 23:59'); return;
+  }
+
+  if(loginTime && logoutTime){
+    const ln = toMinutesFromString(loginTime);
+    const lout = toMinutesFromString(logoutTime);
+    if(lout < ln){ alert('Logout time must be later than login time'); return; }
+  }
+
+  const workMins = calcWorkMins(loginTime, logoutTime, breakfastVal || old.breakfastOpt || 'no', leaveVal || old.halfDayLeave || 'none');
+  entries[date] = {
+    loginTime, logoutTime,
+    breakfastOpt: breakfastVal,
+    halfDayLeave: leaveVal,
+    workMins
+  };
+  const ok = saveEntries(entries);
+  if(!ok) alert('Unable to save data: Storage unavailable (Private Mode?)');
+
+  dailyResult.innerHTML = `Entry saved for ${date}.<br>Effective Work Hours: ${minutesToTime(workMins)}`;
+  updateSummaryBlocks(date);
+
+  // re-render this month
+  const dt = new Date(date + 'T00:00');
+  viewYear = dt.getFullYear();
+  viewMonth = dt.getMonth();
+  renderCalendar(viewYear, viewMonth);
+});
+
+/* =================== Delete behavior (single-date only) =================== */
+deleteBtn.addEventListener('click', () => {
+  const date = dateInput.value || selectedDate;
+  if(!date){ alert('Select a date first to delete entry'); return; }
+  if(!entries[date]){ alert('No entry exists for the selected date'); return; }
+  if(!confirm(`Are you sure you want to delete the entry for ${date}?`)) return;
+  delete entries[date];
+  saveEntries(entries);
+  // refresh UI
+  document.getElementById('timeForm').reset();
+  document.getElementById('dateInput').value = date;
+  dayDetails.textContent = 'Tap a day for details...';
+  dailyResult.textContent = '';
+  weeklySummary.textContent = '';
+  const dt = new Date(date + 'T00:00');
+  viewYear = dt.getFullYear();
+  viewMonth = dt.getMonth();
+  renderCalendar(viewYear, viewMonth);
+  alert(`Entry for ${date} deleted successfully.`);
+});
+
+/* =================== Auto-tab inputs (iOS-friendly) =================== */
+function setupAutoTab(fromId, toId){
+  const fromEl = document.getElementById(fromId);
+  const toEl = document.getElementById(toId);
+  fromEl.addEventListener('input', () => {
+    if(fromEl.value.length >= 2){ setTimeout(()=>{ toEl.focus(); }, 10); }
+  });
+}
+setupAutoTab('loginHour','loginMinute');
+setupAutoTab('logoutHour','logoutMinute');
+
+/* =================== Report generator (kept intact) =================== */
+reportBtn.addEventListener('click', ()=> {
+  const startDateStr = reportStart.value;
+  const endDateStr = reportEnd.value;
+  if(!startDateStr || !endDateStr){ alert('Please select both start and end dates.'); return; }
+  const startDate = new Date(startDateStr + 'T00:00');
+  const endDate = new Date(endDateStr + 'T00:00');
+  if(startDate > endDate){ alert('Start date must be before or equal to end date.'); return; }
+
+  let currentDate = new Date(startDate);
+  let rowsHtml = `
+    <table id="reportTable">
+      <thead>
+        <tr><th>Date</th><th>Login</th><th>Logout</th><th>Breakfast</th><th>Leave</th><th>Work Hours</th><th>Extra/Left Hours</th></tr>
+      </thead>
+      <tbody>
+  `;
+  const dailyTarget = Math.round(WEEKLY_TARGET_MINS / 5);
+  let totalWorkMins = 0;
+  while(currentDate <= endDate){
+    const dateStr = formatDate(currentDate);
+    const e = entries[dateStr];
+    if(e){
+      const diff = e.workMins - dailyTarget;
+      let diffText = '';
+      if(diff < 0) diffText = 'Left ' + minutesToTime(-diff);
+      else if(diff > 0) diffText = 'Extra ' + minutesToTime(diff);
+      else diffText = 'On target';
+      rowsHtml += `<tr>
+        <td>${dateStr}</td>
+        <td>${e.loginTime || ''}</td>
+        <td>${e.logoutTime || ''}</td>
+        <td>${e.breakfastOpt}</td>
+        <td>${e.halfDayLeave}</td>
+        <td>${minutesToTime(e.workMins)}</td>
+        <td>${diffText}</td>
+      </tr>`;
+      totalWorkMins += e.workMins;
+    }else{
+      rowsHtml += `<tr><td>${dateStr}</td><td colspan="6" style="color:#a00;">No data</td></tr>`;
+    }
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+  rowsHtml += `</tbody>
+    <tfoot>
+      <tr><td colspan="5" style="font-weight:bold; text-align:right;">Total Work Hours in Range:</td><td colspan="2" style="font-weight:bold;">${minutesToTime(totalWorkMins)}</td></tr>
+    </tfoot>
+  </table>`;
+  reportOutput.innerHTML = rowsHtml;
+});
+
+/* =================== Init =================== */
+(function init(){
+  const now = new Date();
+  dateInput.value = formatDate(now);
+  viewYear = now.getFullYear();
+  viewMonth = now.getMonth();
+  renderCalendar(viewYear, viewMonth);
+  updateSummaryBlocks(formatDate(now));
+})();
+
+/* Small keyboard accessibility: Enter/Space on cells */
+calendarBody.addEventListener('keydown', (ev) => {
+  const target = ev.target;
+  if(target && target.matches && target.matches('td[data-date]')){
+    if(ev.key === 'Enter' || ev.key === ' '){
+      ev.preventDefault();
+      const iso = target.getAttribute('data-date');
+      // simulate click behavior (single select)
+      const prev = calendarBody.querySelector('td.selected');
+      if(prev) prev.classList.remove('selected');
+      target.classList.add('selected');
+      selectedDate = iso;
+      onDayClick(iso, target);
+    }
+  }
+});
+</script>
+</body>
+</html>
